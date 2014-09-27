@@ -23,10 +23,10 @@ def snpToDisorder():
     n_avglist = []
     d_avglist = []
 
-    if not os.path.exists("/home/andrew/pymol/histograms"):
-        os.makedirs("/home/andrew/pymol/histograms")
+    if not os.path.exists("/home/andrew/Documents/CS/projects/andrewarul/histograms"):
+        os.makedirs("/home/andrew/Documents/CS/projects/andrewarul/histograms")
 
-    workbook = xlrd.open_workbook("/home/andrew/pymol/proteins.xlsx")
+    workbook = xlrd.open_workbook("/home/andrew/Documents/CS/projects/andrewarul/prot_test.xlsx")
     worksheet = workbook.sheet_by_name("Sheet1")
     num_rows = worksheet.nrows
     for cur_row in range(1, num_rows):
@@ -40,6 +40,8 @@ def snpToDisorder():
 
         s_input = worksheet.cell_value(cur_row, 4)
         snps = [int(s) for s in s_input.split(", ") if s.isdigit()]
+        # remove duplicate values
+        snps = removeDup(snps)
         d_input = worksheet.cell_value(cur_row, 5).split()
         d_list = []
         for i in range(1, len(d_input)):
@@ -57,14 +59,20 @@ def snpToDisorder():
             continue
         else:
             print "Data successfully obtained."
+
+        # check if chain is not A
+        print worksheet.cell_value(cur_row, 6)
+        ch = "a"
+        if worksheet.cell_value(cur_row, 6) != "":
+            ch = worksheet.cell_value(cur_row, 6)
         # create folder for obj
-        if not os.path.exists("/home/andrew/pymol/" + obj):
-            os.makedirs("/home/andrew/pymol/" + obj)
-        fout = open("/home/andrew/pymol/" + obj + "/n_results.txt", "w")  # normal results
-        fout_d = open("/home/andrew/pymol/" + obj + "/d_results.txt", "w")  # disordered results
+        if not os.path.exists("/home/andrew/Documents/CS/projects/andrewarul/" + obj):
+            os.makedirs("/home/andrew/Documents/CS/projects/andrewarul/" + obj)
+        fout = open("/home/andrew/Documents/CS/projects/andrewarul/" + obj + "/n_results.txt", "w")  # normal results
+        fout_d = open("/home/andrew/Documents/CS/projects/andrewarul/" + obj + "/d_results.txt", "w")  # disordered results
 
         # used for stat - numpy/matplotlib
-        fstat = open("/home/andrew/pymol/" + obj + "/avgs.txt", "w")
+        fstat = open("/home/andrew/Documents/CS/projects/andrewarul/" + obj + "/avgs.txt", "w")
         n_sum = 0  # sums and counts of all distances, for avg.
         d_sum = 0
         n_count = 0
@@ -75,7 +83,7 @@ def snpToDisorder():
         for i in range(len(snps)):
             for j in range(start, length + start - 1):
                 if snps[i] != j:
-                    temp_dist = calcDist(obj, i, j)
+                    temp_dist = calcDist(obj, i, j, ch)
                     # if temp_dist is -1, it means that the residue could not be found
                     if temp_dist == -1:
                         pass
@@ -116,8 +124,8 @@ def snpToDisorder():
             plt.hist(n_hist, bins, color="green", alpha=0.5, label="Ordered")
             plt.hist(d_hist, bins, color="blue", alpha=0.6, label="Disordered")
             plt.legend(loc="upper right", numpoints=1)
-            pylab.savefig("/home/andrew/pymol/" + obj + "/" + obj + "_hist.png")
-            pylab.savefig("/home/andrew/pymol/histograms/" + obj + "_hist.png")
+            pylab.savefig("/home/andrew/Documents/CS/projects/andrewarul/" + obj + "/" + obj + "_hist.png")
+            pylab.savefig("/home/andrew/Documents/CS/projects/andrewarul/histograms/" + obj + "_hist.png")
             print "Histogram generated.\n"
             plt.cla()
             plt.clf()
@@ -128,11 +136,11 @@ def snpToDisorder():
     plt.hist(n_avglist, bins, color="green", alpha=0.5, label="Ordered Averages")
     plt.hist(d_avglist, bins, color="blue", alpha=0.5, label="Disordered Averages")
     plt.legend(loc="upper right", numpoints=1)
-    pylab.savefig("/home/andrew/pymol/histograms/avg_hist.png")
+    pylab.savefig("/home/andrew/Documents/CS/projects/andrewarul/histograms/avg_hist.png")
     print "\n\nGENERAL HISTOGRAM GENERATED.\n"
 
     # run chisquare program (in same folder)
-    chisquare()
+    # chisquare()
 
     balance = 0
     for i in range(len(n_avglist)):
@@ -143,7 +151,7 @@ def snpToDisorder():
     print balance
 
 
-def calcDist(obj, l1, l2):
+def calcDist(obj, l1, l2, ch):
     # obj is the protein in question, l1, l2 are the positions of residues.
     # delete previous selections and displayed distances
     cmd.delete("dist")
@@ -152,8 +160,8 @@ def calcDist(obj, l1, l2):
     cmd.delete("Residue_2")
 
     # select two residues based on input, at positions l1 and l2 in the sequence
-    cmd.select("Residue_1", "resi {}".format(l1))
-    cmd.select("Residue_2", "resi {}".format(l2))
+    cmd.select("Residue_1", "resi {} and chain {}".format(l1, ch))
+    cmd.select("Residue_2", "resi {} and chain {}".format(l2, ch))
 
     #the underscores ARE IMPORTANT
     distance = cmd.distance("dist", "Residue_1", "Residue_2")
@@ -179,5 +187,10 @@ def stat(lst):
     stddev /= (len(lst) - 1)
     return [mean, stddev ** 2]
 
+
+def removeDup(seq):
+    s = set()
+    s_a = s.add
+    return [x for x in seq if not(x in s or s_a(x))]
 
 cmd.extend("snpToDisorder", snpToDisorder)
