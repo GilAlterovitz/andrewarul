@@ -1,2 +1,2 @@
-Avg Disordered Distance: 38.606804581
-Avg Ordered Distance: 43.5859720231
+Avg Disordered Distance: 43.571961365
+Avg Ordered Distance: 37.4475868203

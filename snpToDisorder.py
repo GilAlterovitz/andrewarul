@@ -1,6 +1,3 @@
-# YOU SHOULD PROBABLY COMMENT THIS AT SOME POINT BEFORE SUMBITTING IT ANYWHERE.
-
-
 """
 @ Andrew Li and Arul Prasad, PRIMES 2014
 @ Script purpose: Given several objects, lengths, the location of drug resistant SNPs within the proteins, and arrays of ranges of disorder within the protein, the program will output two textfiles of distances from the SNPs to every other amino acid in each protein.
@@ -19,20 +16,19 @@ from chisquare import chisquare
 
 def snpToDisorder():
 
-    # two independent sample t-test over all proteins based on averages
     n_avglist = []
     d_avglist = []
 
     if not os.path.exists("/home/andrew/Documents/CS/projects/andrewarul/histograms"):
         os.makedirs("/home/andrew/Documents/CS/projects/andrewarul/histograms")
 
-    workbook = xlrd.open_workbook("/home/andrew/Documents/CS/projects/andrewarul/prot_test.xlsx")
+    workbook = xlrd.open_workbook("/home/andrew/Documents/CS/projects/andrewarul/bacteria.xlsx")
     worksheet = workbook.sheet_by_name("Sheet1")
     num_rows = worksheet.nrows
     for cur_row in range(1, num_rows):
         obj = worksheet.cell_value(cur_row, 1)
         if obj != "":
-            cmd.load(obj + ".pdb")
+            cmd.load("/home/andrew/Documents/CS/projects/andrewarul/" + obj + ".pdb")
         else:
             continue
         length = int(worksheet.cell_value(cur_row, 2))
@@ -40,8 +36,8 @@ def snpToDisorder():
 
         s_input = worksheet.cell_value(cur_row, 4)
         snps = [int(s) for s in s_input.split(", ") if s.isdigit()]
+        print snps
         # remove duplicate values
-        snps = removeDup(snps)
         d_input = worksheet.cell_value(cur_row, 5).split()
         d_list = []
         for i in range(1, len(d_input)):
@@ -61,7 +57,6 @@ def snpToDisorder():
             print "Data successfully obtained."
 
         # check if chain is not A
-        print worksheet.cell_value(cur_row, 6)
         ch = "a"
         if worksheet.cell_value(cur_row, 6) != "":
             ch = worksheet.cell_value(cur_row, 6)
@@ -83,15 +78,16 @@ def snpToDisorder():
         for i in range(len(snps)):
             for j in range(start, length + start - 1):
                 if snps[i] != j:
-                    temp_dist = calcDist(obj, i, j, ch)
+                    temp_dist = calcDist(obj, snps[i], j, ch)
                     # if temp_dist is -1, it means that the residue could not be found
                     if temp_dist == -1:
                         pass
-                    elif (inDisorder(j, d_list)):
+                    elif (inDisorder(j - start + 1, d_list)):
                         fout_d.write(str(temp_dist) + "\n")
                         d_sum += temp_dist
                         d_count += 1
                         d_hist.append(int(temp_dist))
+                        # print str(snps[i]) + ", " + str(j) + ", " + str(temp_dist)
                     else:
                         fout.write(str(temp_dist) + "\n")
                         n_sum += temp_dist
@@ -121,6 +117,8 @@ def snpToDisorder():
         # generate histograms
         if len(n_hist) > 0 and len(d_hist) > 0:
             bins = np.linspace(0, 100, 100)
+            plt.xlabel("Distances (angstroms)")
+            plt.ylabel("Frequency of Distance")
             plt.hist(n_hist, bins, color="green", alpha=0.5, label="Ordered")
             plt.hist(d_hist, bins, color="blue", alpha=0.6, label="Disordered")
             plt.legend(loc="upper right", numpoints=1)
@@ -131,8 +129,10 @@ def snpToDisorder():
             plt.clf()
         else:
             print "Failed to generate histogram.\n"
-
+    print "reached"
     bins = np.linspace(0, 100, 100)
+    plt.xlabel("Distances (angstroms)")
+    plt.ylabel("Frequency of Distance")
     plt.hist(n_avglist, bins, color="green", alpha=0.5, label="Ordered Averages")
     plt.hist(d_avglist, bins, color="blue", alpha=0.5, label="Disordered Averages")
     plt.legend(loc="upper right", numpoints=1)
@@ -144,7 +144,7 @@ def snpToDisorder():
 
     balance = 0
     for i in range(len(n_avglist)):
-        if n_avglist[i] > d_avglist:
+        if n_avglist[i] > d_avglist[i]:
             pass
         else:
             balance += 1
@@ -165,6 +165,7 @@ def calcDist(obj, l1, l2, ch):
 
     #the underscores ARE IMPORTANT
     distance = cmd.distance("dist", "Residue_1", "Residue_2")
+    # print distance
     return distance
 
 
@@ -187,10 +188,5 @@ def stat(lst):
     stddev /= (len(lst) - 1)
     return [mean, stddev ** 2]
 
-
-def removeDup(seq):
-    s = set()
-    s_a = s.add
-    return [x for x in seq if not(x in s or s_a(x))]
 
 cmd.extend("snpToDisorder", snpToDisorder)
